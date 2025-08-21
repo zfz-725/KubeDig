@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: ksp-wordpress-block-mount-file
+  namespace: wordpress-mysql
+spec:
+  severity: 5
+  selector:
+    matchLabels:
+      app: wordpress
+  file:
+    matchDirectories:
+    - dir: /dev/shm/
+      readOnly: true
+      recursive: true
+  action:
+    Block

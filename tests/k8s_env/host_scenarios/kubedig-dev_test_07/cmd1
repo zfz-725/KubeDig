@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: head -n 1 /etc/hostname
+result: passed
+---
+operation: File
+condition: /etc/hostname
+action: Allow

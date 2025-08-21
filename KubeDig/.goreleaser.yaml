@@ -1,0 +1,108 @@
+project_name: kubedig
+
+builds:
+  - binary: "opt/kubedig/kubedig"
+    id: kubedig
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "-X main.BuildDate={{.Date}}"
+      - "-X main.GitCommit={{.Commit}}"
+      - "-X main.GitBranch={{.Branch}}"
+      - "-X main.GitSummary={{.Summary}}"
+
+release:
+  replace_existing_artifacts: true
+  mode: replace
+  make_latest: false
+
+signs:
+  - cmd: cosign
+    certificate: '${artifact}.cert'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}' 
+      - '--output-signature=${signature}'
+      - '${artifact}'
+      - --yes
+    artifacts: all
+    output: true
+
+archives:
+  - id: "kubedig"
+    builds:
+      - "kubedig"
+    name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+    files:
+      - src: ./BPF/*
+        dst: /opt/kubedig/BPF/
+      - src: ./templates/*
+        dst: /opt/kubedig/templates/
+      - src: ./packaging/kubedig.yaml
+        dst: /opt/kubedig/
+        strip_parent: true
+      - src: ./packaging/kubedig.service
+        dst: /usr/lib/systemd/system/
+        strip_parent: true
+      - src: ./karmor
+        dst: /usr/local/bin/karmor
+
+nfpms:
+  - id: "kubedig"
+    builds:
+      - "kubedig"
+    formats:
+      - deb
+      - rpm
+    replaces:
+      - kubedig
+    maintainer: "Barun Acharya <barun.acharya@accuknox.com>"
+    description: |
+      Cloud-native Runtime Security Enforcement System
+    vendor: "kubedig"
+    homepage: "https://kubedig.com"
+    license: "Apache 2"
+    file_name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+    bindir: /
+    contents:
+      - dst: /opt/kubedig
+        type: dir
+      - src: ./BPF/*
+        dst: /opt/kubedig/BPF
+      - src: ./templates/*
+        dst: /opt/kubedig/templates/
+      - src: ./packaging/kubedig.yaml
+        dst: /opt/kubedig/kubedig.yaml
+        type: config
+      - src: ./packaging/kubedig.service
+        dst: /usr/lib/systemd/system/kubedig.service
+        type: config
+      - src: /opt/kubedig/kubedig
+        dst: /usr/local/bin/kubedig
+        type: symlink
+      - src: ./karmor
+        dst: /usr/local/bin/karmor
+    scripts:
+      postinstall: packaging/post-install.sh
+    overrides:
+      deb:
+        recommends:
+          - make
+          - libelf-dev
+          - clang
+          - llvm
+          - linux-headers-generic
+      rpm:
+        recommends:
+          - make
+          - elfutils-libelf-devel
+          - clang
+          - llvm
+          - kernel-devel
+          - policycoreutils-devel
+          - setools-console

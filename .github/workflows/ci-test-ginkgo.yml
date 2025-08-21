@@ -1,0 +1,254 @@
+name: ci-test-ginkgo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-ginkgo.yml"
+      - "pkg/KubeDigOperator/**"
+      - "deployments/helm/**"
+      - "examples/multiubuntu/build/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-ginkgo.yml"
+      - "examples/multiubuntu/build/**"
+      - "pkg/KubeDigOperator/**"
+      - "deployments/helm/**"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  build:
+    name: Auto-testing Framework / ${{ matrix.os }} / ${{ matrix.runtime }}
+    runs-on: ${{ matrix.os }}
+    env:
+      RUNTIME: ${{ matrix.runtime }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+        runtime: ["containerd", "crio"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+      
+      - name: Check what paths were updated
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            controller:
+              - 'pkg/KubeDigController/**'
+            multiubuntu:
+              - 'examples/multiubuntu/build/**'
+
+      - name: Install the latest LLVM toolchain
+        run: ./.github/workflows/install-llvm.sh
+
+      - name: Compile libbpf
+        run: ./.github/workflows/install-libbpf.sh
+
+      - name: Setup a Kubernetes environment
+        run: ./.github/workflows/install-k3s.sh
+
+      - name: Generate KubeDig artifacts
+        run: |
+          #set the $IS_COVERAGE env var to 'true' to build the kubedig-test image for coverage calculation
+          export IS_COVERAGE=true
+          GITHUB_SHA=$GITHUB_SHA ./KubeDig/build/build_kubedig.sh
+
+      - name: Build Kubedig-Operator
+        working-directory: pkg/KubeDigOperator
+        run: |
+          make docker-build
+      
+      - name: Build KubeDigController
+        if: steps.filter.outputs.controller == 'true'
+        run: make -C pkg/KubeDigController/ docker-build TAG=latest
+
+      - name: Build multiubuntu docker image
+        working-directory: examples/multiubuntu/build
+        if: steps.filter.outputs.multiubuntu == 'true'
+        run: docker build -t kubedig/ubuntu-w-utils:latest .
+
+      - name: deploy pre existing pod 
+        run: |
+          kubectl apply -f ./tests/k8s_env/ksp/pre-run-pod.yaml
+          sleep 60
+          kubectl get pods -A
+
+      - name: make changes in multiubuntu-deployment
+        working-directory: tests/k8s_env
+        if: steps.filter.outputs.multiubuntu == 'true'
+        run: |
+          grep -rl "kubedig/ubuntu-w-utils:latest" ./ | while read -r file; do sed -i 's/imagePullPolicy: Always/imagePullPolicy: Never/g' "$file"; done
+
+      - name: Run KubeDig
+        timeout-minutes: 7
+        run: |
+          if [[ ${{ matrix.runtime }} == "containerd" ]]; then
+            docker save kubedig/kubedig-test-init:latest | sudo k3s ctr images import -
+            docker save kubedig/kubedig-test:latest | sudo k3s ctr images import -
+            docker save kubedig/kubedig-operator:latest | sudo k3s ctr images import -
+            docker save kubedig/kubedig-snitch:latest | sudo k3s ctr images import -
+            
+            if [[ ${{ steps.filter.outputs.controller }} == 'true' ]]; then 
+              docker save kubedig/kubedig-controller:latest | sudo k3s ctr images import -
+            fi
+            if [[ ${{ steps.filter.outputs.multiubuntu }} == 'true' ]]; then
+              docker save kubedig/ubuntu-w-utils:latest | sudo k3s ctr images import -
+            fi
+          else
+            if [ ${{ matrix.runtime }} == "crio" ]; then
+              docker save kubedig/kubedig-test-init:latest | sudo podman load
+              sudo podman tag localhost/latest:latest docker.io/kubedig/kubedig-test-init:latest
+              docker save kubedig/kubedig-test:latest | sudo podman load
+              sudo podman tag localhost/latest:latest docker.io/kubedig/kubedig-test:latest
+              docker save kubedig/kubedig-operator:latest | sudo podman load
+              sudo podman tag localhost/latest:latest docker.io/kubedig/kubedig-operator:latest
+              docker save kubedig/kubedig-snitch:latest | sudo podman load
+              sudo podman tag localhost/latest:latest docker.io/kubedig/kubedig-snitch:latest
+              if [ ${{ steps.filter.outputs.controller }} == 'true' ]; then
+                docker save kubedig/kubedig-controller:latest | sudo podman load
+                sudo podman tag localhost/latest:latest docker.io/kubedig/kubedig-controller:latest
+              fi
+              if [ ${{ steps.filter.outputs.multiubuntu }} == 'true' ]; then
+                docker save kubedig/ubuntu-w-utils:latest | sudo podman load
+                sudo podman tag localhost/latest:latest docker.io/kubedig/ubuntu-w-utils:latest
+              fi
+            fi
+          fi
+          docker system prune -a -f 
+          docker buildx prune -a -f
+          helm upgrade --install kubedig-operator ./deployments/helm/KubeDigOperator -n kubedig --create-namespace --set kubedigOperator.image.tag=latest  --set kubedigOperator.annotateExisting=true
+          kubectl wait --for=condition=ready --timeout=5m -n kubedig pod -l kubedig-app=kubedig-operator
+          kubectl get pods -A
+          if [[ ${{ steps.filter.outputs.controller }} == 'true' ]]; then
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-coverage.yaml --dry-run=client -o json | \
+            jq '.spec.kubedigControllerImage.imagePullPolicy = "Never"' | \
+            kubectl apply -f -
+          else 
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-coverage.yaml
+          fi
+
+          kubectl wait -n kubedig --timeout=5m --for=jsonpath='{.status.phase}'=Running kubedigconfigs/kubedigconfig-test
+          
+          while [ ! "$(kubectl wait --timeout=5s --for=condition=ready pod -l kubedig-app,kubedig-app!=kubedig-snitch -n kubedig >/dev/null 2>&1; echo $?)" -eq 0 ]; do
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app,kubedig-app!=kubedig-controller -n kubedig
+            kubectl rollout status --timeout=5m daemonset -l kubedig-app=kubedig -n kubedig
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app=kubedig-controller -n kubedig
+            kubectl get pods -A
+          done
+
+          sleep 10
+          DAEMONSET_NAME=$(kubectl get daemonset -n kubedig -o jsonpath='{.items[0].metadata.name}')
+          echo "DaemonSet: $DAEMONSET_NAME"
+
+          kubectl patch daemonset $DAEMONSET_NAME -n kubedig --type='json' -p='[
+            {
+              "op": "add",
+              "path": "/spec/template/spec/volumes/-",
+              "value": {
+                "name": "coverage-storage",
+                "hostPath": {
+                  "path": "/coverage",
+                  "type": "DirectoryOrCreate"
+                }
+              }
+            },
+            {
+              "op": "add",
+              "path": "/spec/template/spec/containers/0/volumeMounts/-",
+              "value": {
+                "mountPath": "/coverage",
+                "name": "coverage-storage"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/spec/template/spec/containers/0/args/-",
+              "value": "-test.coverprofile=/coverage/coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out"
+            }
+          ]'
+
+          sleep 15
+
+      - name: Get KubeDig POD info
+        run: |
+          DAEMONSET_NAME=$(kubectl get daemonset -n kubedig -o jsonpath='{.items[0].metadata.name}')
+          LABEL_SELECTOR=$(kubectl get daemonset $DAEMONSET_NAME -n kubedig -o jsonpath='{.spec.selector.matchLabels}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' | paste -sd, -)
+          POD_NAME=$(kubectl get pods -n kubedig -l "$LABEL_SELECTOR" -o jsonpath='{.items[*].metadata.name}')
+          echo "Pod: $POD_NAME"
+          echo "POD_NAME=$POD_NAME" >> $GITHUB_ENV
+
+      - name: Test KubeDig using Ginkgo
+        run: |
+          go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
+          make
+        working-directory: ./tests/k8s_env
+        timeout-minutes: 30
+
+      - name: Kill KubeDig prcoess in the pod
+        run: |
+          KUBEDIG_PID=$(kubectl exec ${{ env.POD_NAME }} -n kubedig -c kubedig -- sh -c "ps aux | grep '[K]ubeArmor/kubedig-test' | awk '{print \$1}'")
+          kubectl exec ${{ env.POD_NAME }} -n kubedig -c kubedig -- sh -c "kill -s SIGINT $KUBEDIG_PID"
+          sleep 10
+        env:
+          POD_NAME: ${{ env.POD_NAME }}
+
+      - name: Extract coverage file
+        run: |
+          for i in {1..24}; do
+            if [ -f /coverage/coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out ]; then
+              cp /coverage/coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out
+              break
+            fi
+            sleep 5
+          done
+          ls -l
+        working-directory: KubeDig
+        
+      - name: Get karmor sysdump
+        if: ${{ failure() }}
+        run: |
+          kubectl describe pod -n kubedig -l kubedig-app=kubedig
+          curl -sfL http://get.kubedig.io/ | sudo sh -s -- -b /usr/local/bin
+          mkdir -p /tmp/kubedig/ && cd /tmp/kubedig && karmor sysdump
+
+      - name: Archive log artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubedig.logs
+          path: |
+            /tmp/kubedig/
+            /tmp/kubedig.*
+
+      - name: Measure code coverage
+        if: ${{ always() }}
+        run: |
+          ls -l
+          go tool cover -func coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out
+        working-directory: KubeDig
+        env:
+          GOPATH: /home/runner/go
+
+      - name: Upload coverage file
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-k8s-${{ matrix.os }}-${{ matrix.runtime }}
+          path: KubeDig/coverage_k8s_${{ matrix.os }}_${{ matrix.runtime }}.out

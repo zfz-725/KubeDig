@@ -1,0 +1,8 @@
+apiVersion: v2
+appVersion: v1.4.0
+description: A Helm chart for Kubedig on Kubernetes
+home: https://github.com/zfz-725/KubeDig
+icon: https://github.com/zfz-725/KubeDig/blob/main/.gitbook/assets/logo.png?raw=true
+name: kubedig
+type: application
+version: v1.4.0

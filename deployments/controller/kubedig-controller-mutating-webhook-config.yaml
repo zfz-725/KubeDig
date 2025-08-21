@@ -1,0 +1,55 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kubedig-controller-serving-cert
+  namespace: kubedig
+spec:
+  dnsNames:
+  - kubedig-controller-webhook-service.kubedig.svc
+  - kubedig-controller-webhook-service.kubedig.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: kubedig-controller-selfsigned-issuer
+  secretName: kubedig-controller-webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: kubedig-controller-selfsigned-issuer
+  namespace: kubedig
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: kubedig/kubedig-controller-serving-cert
+  name: kubedig-controller-mutating-webhook-configuration
+  namespace: kubedig
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: kubedig-controller-webhook-service
+      namespace: kubedig
+      path: /mutate-pods
+  failurePolicy: Ignore
+  name: annotation.kubedig.com
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+    - pods/binding
+  sideEffects: NoneOnDryRun
+  objectSelector:
+    matchExpressions:
+    - key: "kubedig-app"
+      operator: DoesNotExist

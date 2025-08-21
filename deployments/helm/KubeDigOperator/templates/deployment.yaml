@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    kubedig-app: {{ .Values.kubedigOperator.name }}
+spec:
+  selector:
+    matchLabels:
+      kubedig-app: {{ .Values.kubedigOperator.name }}
+  template:
+    metadata:
+      labels:
+        kubedig-app: {{ .Values.kubedigOperator.name }}
+      {{- with .Values.kubedigOperator.podLabels }}
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.kubedigOperator.podAnnotations }}
+      annotations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.kubedigOperator.podSecurityContext }}
+      securityContext:
+            {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- if .Values.kubedigOperator.image.imagePullSecrets }}
+      imagePullSecrets:
+      {{ toYaml .Values.kubedigOperator.image.imagePullSecrets | indent 6 }}
+      {{- end }}
+      {{- if .Values.kubedigOperator.tolerations }}
+      tolerations:
+      {{ toYaml .Values.kubedigOperator.tolerations | indent 6 }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.kubedigOperator.name }}
+        env:
+        - name: KUBEDIG_OPERATOR_NS
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- if .Values.imagePinning -}}
+          {{ include "pinnedImages" .Values.oci_meta | trim | nindent 8 }}
+        {{- end }}
+        image: {{ include "operatorImage" . }}
+        imagePullPolicy: {{ .Values.kubedigOperator.imagePullPolicy }}
+        args:
+        - --annotateExisting={{ .Values.kubedigOperator.annotateExisting }}
+        - --annotateResource={{ .Values.kubedigOperator.annotateResource }}
+        {{- if .Values.kubedigOperator.args -}}
+          {{- toYaml .Values.kubedigOperator.args | trim | nindent 8 }}
+        {{- end }}
+        {{- with .Values.kubedigOperator.securityContext }}
+        securityContext:
+              {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.kubedigOperator.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      serviceAccountName: {{ .Values.kubedigOperator.name }}
+  

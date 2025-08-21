@@ -1,0 +1,113 @@
+name: ci-test-go
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-go.yml"
+      - "pkg/KubeDigOperator/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-go.yml"
+      - "pkg/KubeDigOperator/**"
+    
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  go-fmt:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Check gofmt
+        run: make gofmt
+        working-directory: KubeDig
+
+  go-lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Run Revive Action on KubeDig
+        uses: morphy2k/revive-action@v2
+        with:
+          path: "./KubeDig/..."
+
+  go-lint-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Run Revive Action on KubeDig tests
+        uses: morphy2k/revive-action@v2
+        with:
+          path: "./tests/..."
+
+  go-sec:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Run Gosec Security Scanner
+        run: make gosec
+        working-directory: KubeDig
+
+  go-vuln:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Run govulncheck 
+        run: make scan
+        working-directory: KubeDig
+
+  go-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Run go test on the KubeDig/KubeDig directory
+        run: go test ./...
+        working-directory: KubeDig
+
+  license:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check License Header
+        uses: apache/skywalking-eyes@ed436a5593c63a25f394ea29da61b0ac3731a9fe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

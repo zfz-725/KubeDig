@@ -1,0 +1,9 @@
+cluster: "default"
+gRPC: "32767"
+hostVisibility: "process,file,network,capabilities"
+enableKubeDigHostPolicy: true
+enableKubeDigVm: false
+k8s: false
+alertThrottling: true
+maxAlertPerSec: 10
+throttleSec: 30

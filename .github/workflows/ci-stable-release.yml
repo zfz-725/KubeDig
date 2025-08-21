@@ -1,0 +1,87 @@
+name: ci-stable-release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "STABLE-RELEASE"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  push-stable-version:
+    name: Create KubeDig stable release
+    if: github.repository == 'kubedig/kubedig'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install regctl
+        run: |
+          curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 >regctl
+          chmod 755 regctl
+          mv regctl /usr/local/bin
+
+      - name: Check install
+        run: regctl version
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_AUTHTOK }}
+
+      - name: Generate the stable version of KubeDig in Docker Hub
+        run: |
+          STABLE_VERSION=`cat STABLE-RELEASE`
+          regctl image copy kubedig/kubedig:$STABLE_VERSION kubedig/kubedig:stable --digest-tags
+          regctl image copy kubedig/kubedig-init:$STABLE_VERSION kubedig/kubedig-init:stable --digest-tags
+          regctl image copy kubedig/kubedig-ubi:$STABLE_VERSION kubedig/kubedig-ubi:stable --digest-tags
+          regctl image copy kubedig/kubedig-controller:$STABLE_VERSION kubedig/kubedig-controller:stable --digest-tags
+          regctl image copy kubedig/kubedig-operator:$STABLE_VERSION kubedig/kubedig-operator:stable --digest-tags
+          regctl image copy kubedig/kubedig-snitch:$STABLE_VERSION kubedig/kubedig-snitch:stable --digest-tags
+
+      - name: Publish Helm chart
+        env:
+          # Access token which can push to a different repo in the same org
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          STABLE_VERSION=`cat STABLE-RELEASE`
+          gh release create --repo kubedig/charts $STABLE_VERSION --generate-notes
+
+
+  update-helm-chart:
+    name: Update KubeDig Helm chart version
+    if: github.repository == 'kubedig/kubedig'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update Chart.yaml
+        id: update
+        run: |
+          STABLE_VERSION=`cat STABLE-RELEASE`
+
+          sed -i -e "s/appVersion:.*/appVersion: $STABLE_VERSION/g" deployments/helm/*/Chart.yaml
+          sed -i -e "s/version:.*/version: $STABLE_VERSION/g" deployments/helm/*/Chart.yaml
+
+          echo "STABLE_VERSION=$STABLE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create PR to update Helm chart version in KubeDig repo
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: update-helm-${{ steps.update.outputs.STABLE_VERSION }}
+          add-paths: "deployments/helm/*/Chart.yaml"
+          commit-message: "[skip ci] Update Helm Chart To ${{ steps.update.outputs.STABLE_VERSION }}"
+          committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          title: "[skip ci] Update Helm Chart To ${{ steps.update.outputs.STABLE_VERSION }}"
+          base: main
+          signoff: true
+          delete-branch: true

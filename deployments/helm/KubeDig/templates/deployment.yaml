@@ -1,0 +1,142 @@
+{{- if .Values.kubedigRelay.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    kubedig-app: kubedig-relay
+  name: kubedig-relay
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kubedig-app: kubedig-relay
+  template:
+    metadata:
+      annotations:
+        kubedig-policy: audited
+      labels:
+        kubedig-app: kubedig-relay
+    spec:
+      {{- if .Values.kubedigRelay.image.imagePullSecrets }}
+      imagePullSecrets:
+      {{ toYaml .Values.kubedigRelay.image.imagePullSecrets | indent 6 }}
+      {{- end }}
+      {{- if .Values.kubedigRelay.tolerations }}
+      tolerations:
+      {{ toYaml .Values.kubedigRelay.tolerations | indent 6 }}
+      {{- end }}
+      containers:
+      - args:
+        {{printf "- -tlsEnabled=%t" .Values.tls.enabled}}
+        {{printf "- -tlsCertPath=%s" .Values.kubedigRelay.tls.tlsCertPath}}
+        {{printf "- -tlsCertProvider=%s" .Values.kubedigRelay.tls.tlsCertProvider}}
+        image: {{printf "%s:%s" .Values.kubedigRelay.image.repository .Values.kubedigRelay.image.tag}}
+        imagePullPolicy: {{ .Values.kubedigRelay.imagePullPolicy }}
+        name: kubedig-relay-server
+        env:
+        - name: ENABLE_STDOUT_LOGS
+          value: {{ quote .Values.kubedigRelay.enableStdoutLogs }}
+        - name: ENABLE_STDOUT_ALERTS
+          value: {{ quote .Values.kubedigRelay.enableStdoutAlerts }}
+        - name: ENABLE_STDOUT_MSGS
+          value: {{ quote .Values.kubedigRelay.enableStdoutMsg }}
+        ports:
+        - containerPort: 32767
+        {{- if .Values.tls.enabled }}
+        volumeMounts:
+          {{- toYaml .Values.kubedigRelay.tls.certVolumeMount | trim | nindent 10 }}
+        {{- end}}
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: kubedig-relay
+      {{- if .Values.tls.enabled }}
+      volumes:
+        {{- toYaml .Values.kubedigRelay.tls.certVolume | trim | nindent 8 }}
+      {{- end }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    kubedig-app: {{ .Values.kubedigController.name }}
+  name: {{ .Values.kubedigController.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.kubedigController.replicas }}
+  selector:
+    matchLabels:
+      kubedig-app: {{ .Values.kubedigController.name }}
+  template:
+    metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/kube-rbac-proxy: unconfined
+        container.apparmor.security.beta.kubernetes.io/manager: unconfined
+        kubectl.kubernetes.io/default-container: manager
+        kubedig-policy: audited
+      labels:
+        kubedig-app: {{ .Values.kubedigController.name }}
+    spec:
+      containers:
+      - args:
+        - --health-probe-bind-address=:8081
+        - --leader-elect
+        - --anotateExisting=false
+        command:
+        - /manager
+        image: {{printf "%s:%s" .Values.kubedigController.image.repository .Values.kubedigController.image.tag}}
+        imagePullPolicy: {{ .Values.kubedigController.imagePullPolicy }}
+      {{- if .Values.kubedigController.image.imagePullSecrets }}
+        imagePullSecrets:
+      {{ toYaml .Values.kubedigController.image.imagePullSecrets | indent 8 }}
+      {{- end }}
+      {{- if .Values.kubedigController.tolerations }}
+      tolerations:
+      {{ toYaml .Values.kubedigController.tolerations | indent 6 }}
+      {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        - mountPath: /sys/kernel/security
+          name: sys-path
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: {{ .Values.kubedigController.name }}
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: {{ .Values.kubedigController.name }}-webhook-server-cert
+      - hostPath:
+          path: /sys/kernel/security
+          type: Directory
+        name: sys-path

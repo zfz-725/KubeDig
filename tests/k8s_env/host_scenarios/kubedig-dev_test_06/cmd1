@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: head -n 1 /etc/hostname
+result: failed
+---
+operation: File
+condition: /etc/hostname
+action: Block

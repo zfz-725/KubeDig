@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: head -n 1 /etc/default/useradd
+result: passed
+---
+operation: File
+condition: /etc/default/useradd
+action: Allow

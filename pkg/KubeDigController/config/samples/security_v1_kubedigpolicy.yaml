@@ -1,0 +1,6 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: kubedigpolicy-sample
+spec:
+  # TODO(user): Add fields here

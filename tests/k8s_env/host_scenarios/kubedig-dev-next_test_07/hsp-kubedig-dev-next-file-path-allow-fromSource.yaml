@@ -1,0 +1,28 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigHostPolicy
+metadata:
+  name: hsp-kubedig-dev-next-file-path-allow-fromsource
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: kubedig-dev-next
+  severity: 5
+  file:
+    matchPaths:
+    - path: /etc/hostname
+      fromSource:
+      - path: /usr/bin/head
+  action:
+    Allow
+
+# kubedig-dev-next_test_07
+
+# test
+# $ head /etc/hostname
+# kubedig-dev
+# $ head /etc/hosts
+# head: /etc/hosts: Permission denied
+
+# expectation
+# /usr/bin/head can only access /etc/hostname
+# /usr/bin/head cannot access any others

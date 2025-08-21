@@ -1,0 +1,51 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubedig-operator-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubedig-operator-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kubedig-operator
+  namespace: kubedig
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubedig-operator-manage-kubedig-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubedig-operator-manage-kubedig-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kubedig-operator
+  namespace: kubedig
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubedig-operator-manage-controller-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubedig-operator-manage-controller-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kubedig-operator
+  namespace: kubedig
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubedig-operator-manage-relay-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubedig-operator-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: kubedig-operator
+  namespace: default  

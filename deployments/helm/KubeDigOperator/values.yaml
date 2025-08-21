@@ -1,0 +1,69 @@
+autoDeploy: false
+
+# operator will deploy pinned images for each application
+imagePinning: false
+
+# pinned images
+oci_meta:
+  repo: kubedig
+  images:
+    kubedig:
+      image: kubedig
+      tag: stable
+    kubedigInit:
+      image: kubedig-init
+      tag: stable
+    kubedigRelay:
+      image: kubedig-relay-server
+      tag: latest
+    kubedigController:
+      image: kubedig-controller
+      tag: latest
+    kubedigSnitch:
+      image: kubedig-snitch
+      tag: latest
+    kubedigOperator:
+      image: kubedig-operator
+      tag: latest
+
+# in case if image pinning is disabled
+kubedigOperator:
+  annotateResource: false
+  annotateExisting: false
+  name: kubedig-operator
+  image:
+    repository: kubedig/kubedig-operator
+    tag: ""
+  imagePullPolicy: IfNotPresent
+  args: []
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  tolerations: ""
+  # Optional, but if there are a lot of image pulls required, Docker might be rate-limited. So, it's good to add pull secrets for production.
+  imagePullSecrets: ""
+  resources: {}
+  podLabels: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+
+kubedigConfig:
+  defaultCapabilitiesPosture: audit
+  defaultFilePosture: audit
+  defaultNetworkPosture: audit
+  defaultVisibility: process,network
+  enableStdOutLogs: false
+  enableStdOutAlerts: false
+  enableStdOutMsgs: false
+  seccompEnabled: true
+  alertThrottling: true
+  maxAlertPerSec: 10
+  throttleSec: 30
+
+# DO NOT CHANGE THIS VALUES 
+# changing these values will require code changes with the operator
+# these secret names should match with the secrets managed by the operator
+tlsSecrets:
+  kubedigCa: kubedig-ca
+  kubedigClient: kubedig-client-certs
+  relayServer: kubedig-relay-server-certs
+  controllerWebhook: kubedig-controller-webhook-server-cert

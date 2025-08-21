@@ -1,0 +1,16 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigHostPolicy
+metadata:
+  name: hsp-kubedig-dev-file-dir-block-fromsource
+spec:
+  nodeSelector:
+    matchLabels:
+      kubedig.io/hostname: "*"
+  severity: 5
+  file:
+    matchDirectories:
+    - dir: /etc/default/
+      fromSource:
+      - path: /usr/bin/head
+  action:
+    Block

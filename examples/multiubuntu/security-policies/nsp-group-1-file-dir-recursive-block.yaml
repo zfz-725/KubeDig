@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: nsp-group-1-file-dir-recursive-block
+  namespace: multiubuntu
+spec:
+  selector:
+    matchLabels:
+      group: group-1
+  apparmor: |
+    deny /etc/{*,**} rw,
+
+# multiubuntu_test_10
+
+# test
+# $ cat /etc/hostname
+# cat: /etc/hostname: Permission denied (defaultPosture)

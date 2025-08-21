@@ -1,0 +1,122 @@
+name: ci-test-controllers
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "pkg/**"
+      - ".github/workflows/ci-test-controllers.yml"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  kubedig-controller-test:
+    name: Build and Test KubeDigController Using Ginkgo
+    runs-on: ubuntu-20.04
+    timeout-minutes: 30
+    env:
+      RUNTIME: "containerd"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+
+      - name: Check what paths were updated
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            kubedig:
+              - "KubeDig/**"
+              - "protobuf/**"
+            controller:
+              - 'pkg/KubeDigController/**'
+
+      - name: Setup a Kubernetes environment
+        run: ./.github/workflows/install-k3s.sh
+
+      - name: Install the latest LLVM toolchain
+        if: steps.filter.outputs.kubedig == 'true'
+        run: ./.github/workflows/install-llvm.sh
+
+      - name: Compile libbpf
+        if: steps.filter.outputs.kubedig == 'true'
+        run: ./.github/workflows/install-libbpf.sh
+
+      - name: Generate KubeDig artifacts
+        if: steps.filter.outputs.kubedig == 'true'
+        run: GITHUB_SHA=$GITHUB_SHA ./KubeDig/build/build_kubedig.sh
+
+      - name: Build KubeDigController
+        run: make -C pkg/KubeDigController/ docker-build TAG=latest
+
+      - name: Build Kubedig-Operator
+        working-directory: pkg/KubeDigOperator
+        run: |
+          make docker-build
+
+      - name: Install KubeDig Latest and KubeDigController using Helm
+        timeout-minutes: 7
+        run: |
+          # save images
+          docker save kubedig/kubedig-controller:latest | sudo k3s ctr images import -
+          docker save kubedig/kubedig-operator:latest | sudo k3s ctr images import -
+          docker save kubedig/kubedig-snitch:latest | sudo k3s ctr images import -
+          
+          helm upgrade --install kubedig-operator ./deployments/helm/KubeDigOperator -n kubedig --create-namespace --set kubedigOperator.image.tag=latest
+          kubectl wait --for=condition=ready --timeout=5m -n kubedig pod -l kubedig-app=kubedig-operator
+          kubectl get pods -A
+
+          # create kubedigconfig
+          if [[ ${{ steps.filter.outputs.kubedig }} == 'true' ]]; then
+            docker save kubedig/kubedig:latest | sudo k3s ctr images import -
+            docker save kubedig/kubedig-init:latest | sudo k3s ctr images import -
+
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-test.yaml --dry-run=client -o json | \
+            jq '.spec.kubedigControllerImage.imagePullPolicy = "Never"' | \
+            kubectl apply -f -
+          else
+            # use latest kubedig if no changes in kubedig or protobuf dir
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-test.yaml --dry-run=client -o json | \
+            jq '.spec.kubedigControllerImage.imagePullPolicy = "Never" | .spec.kubedigImage.imagePullPolicy = "Always" | .spec.kubedigInitImage.imagePullPolicy = "Always"' | \
+            kubectl apply -f -
+          fi
+
+          kubectl wait -n kubedig --timeout=5m --for=jsonpath='{.status.phase}'=Running kubedigconfigs/kubedigconfig-test
+          
+          while [ ! "$(kubectl wait --timeout=5s --for=condition=ready pod -l kubedig-app,kubedig-app!=kubedig-snitch -n kubedig >/dev/null 2>&1; echo $?)" -eq 0 ]; do
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app,kubedig-app!=kubedig-controller -n kubedig
+            kubectl rollout status --timeout=5m daemonset -l kubedig-app=kubedig -n kubedig
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app=kubedig-controller -n kubedig
+            kubectl get pods -A
+          done  
+          docker system prune -a -f 
+
+      - name: Test KubeDig using Ginkgo
+        run: |
+          go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
+          ginkgo --vv --flake-attempts=10 --timeout=10m smoke/
+        working-directory: ./tests/k8s_env
+        timeout-minutes: 30
+
+      - name: Get karmor sysdump
+        if: ${{ failure() }}
+        run: |
+          kubectl describe pod -n kubedig -l kubedig-app=kubedig
+          curl -sfL http://get.kubedig.io/ | sudo sh -s -- -b /usr/local/bin
+          mkdir -p /tmp/kubedig/ && cd /tmp/kubedig && karmor sysdump
+
+      - name: Archive log artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubedig.logs
+          path: |
+            /tmp/kubedig/
+            /tmp/kubedig.*

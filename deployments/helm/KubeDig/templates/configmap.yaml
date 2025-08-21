@@ -1,0 +1,15 @@
+apiVersion: v1
+data:
+  defaultFilePosture: {{ .Values.kubedigConfigMap.defaultFilePosture | quote }}
+  defaultCapabilitiesPosture: {{ .Values.kubedigConfigMap.defaultCapabilitiesPosture | quote }}
+  defaultNetworkPosture: {{ .Values.kubedigConfigMap.defaultNetworkPosture | quote }}
+  visibility: {{ .Values.kubedigConfigMap.visibility | quote }}
+  alertThrottling: {{ .Values.kubedigConfigMap.alertThrottling | quote }}
+  maxAlertPerSec: {{ .Values.kubedigConfigMap.maxAlertPerSec | quote }}
+  throttleSec: {{ .Values.kubedigConfigMap.throttleSec | quote }}
+kind: ConfigMap
+metadata:
+  labels:
+    kubedig-app: kubedig-configmap
+  name: kubedig-config
+  namespace: {{ .Release.Namespace }}

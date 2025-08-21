@@ -1,0 +1,77 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigclusterpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigclusterpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedighostpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedighostpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigpolicies/status
+  verbs:
+  - get
+  - patch
+  - update

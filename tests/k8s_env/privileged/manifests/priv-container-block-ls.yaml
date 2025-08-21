@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: privileged-container-block-ls
+  namespace: privileged
+spec:
+  severity: 2
+  selector:
+    matchLabels:
+      deployment: privileged
+      kubedig.io/container.name: "[priv-container]"
+  process:
+    matchPaths:
+      - path: /bin/ls
+        # ls
+  action:
+    Block

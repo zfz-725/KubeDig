@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: presets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fileless
+  namespace: presets
+  labels:
+    app: fileless
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fileless
+  template:
+    metadata:
+      labels:
+        app: fileless
+        # annotations:
+        # kubedig-policy: enabled
+        # container.apparmor.security.beta.kubernetes.io/wordpress: localhost/kubedig-wordpress-mysql-wordpress
+    spec:
+      containers:
+      - name: fileless
+        image: kubedig/ubuntu-w-utils:0.2
+

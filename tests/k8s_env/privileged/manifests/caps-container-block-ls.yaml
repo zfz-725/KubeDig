@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: caps-container-block-ls
+  namespace: privileged
+spec:
+  severity: 2
+  selector:
+    matchLabels:
+      deployment: caps
+      kubedig.io/container.name: "[caps-container]"
+  process:
+    matchPaths:
+      - path: /bin/ls
+        # ls
+  action:
+    Block

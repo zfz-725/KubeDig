@@ -1,0 +1,24 @@
+# permissions for end users to edit kubedigpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubedigpolicy-editor-role
+rules:
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - security.kubedig.com
+  resources:
+  - kubedigpolicies/status
+  verbs:
+  - get

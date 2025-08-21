@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: head -n 1 /etc/hosts
+result: passed
+---
+operation: File
+condition: /etc/hosts
+action: Block

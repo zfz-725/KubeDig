@@ -1,0 +1,28 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigHostPolicy
+metadata:
+  name: hsp-kubedig-dev-next-file-dir-block-fromsource
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: kubedig-dev-next
+  severity: 5
+  file:
+    matchDirectories:
+    - dir: /etc/default/
+      fromSource:
+      - path: /usr/bin/head
+  action:
+    Block
+
+# kubedig-dev-next_test_09
+
+# test
+# $ head /etc/default/useradd
+# head: useradd: Permission denied
+# $ head /etc/hostname
+# kubedig-dev
+
+# expectation
+# /usr/bin/head cannot access /etc/default/*
+# /usr/bin/head can access any others

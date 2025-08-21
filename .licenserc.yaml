@@ -1,0 +1,23 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: KubeDig
+    content: |
+      SPDX-License-Identifier: Apache-2.0
+
+  paths:
+    - "**/*.go"
+    - "**/*.sh"
+    - "**/Dockerfile"
+    - "**/Makefile"
+
+  paths-ignore:
+    - "KubeDig/BPF/*"
+    - "KubeDig/**/*bpf*.go"
+    - "protobuf/*"
+
+  comment: on-failure
+
+dependency:
+  files:
+    - go.mod

@@ -1,0 +1,173 @@
+name: ci-test-ubi-ginkgo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-ginkgo.yml"
+      - "pkg/KubeDigOperator/**"
+      - "deployments/helm/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "KubeDig/**"
+      - "tests/**"
+      - "protobuf/**"
+      - ".github/workflows/ci-test-ginkgo.yml"
+      - "examples/multiubuntu/build/**"
+      - "pkg/KubeDigOperator/**"
+      - "deployments/helm/**"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  build:
+    name: Auto-testing Framework / ${{ matrix.os }} / ${{ matrix.runtime }}
+    runs-on: ${{ matrix.os }}
+    env:
+      RUNTIME: ${{ matrix.runtime }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["bpflsm"]
+        
+        runtime: ["crio"]
+  
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'KubeDig/go.mod'
+      
+      - name: Check what paths were updated
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            controller:
+              - 'pkg/KubeDigController/**'
+            multiubuntu:
+              - 'examples/multiubuntu/build/**'
+ 
+      - name: Install the latest LLVM toolchain
+        run: ./.github/workflows/install-llvm.sh
+
+      - name: Compile libbpf
+        run: ./.github/workflows/install-libbpf.sh
+
+      - name: Setup a Kubernetes environment
+        run: ./.github/workflows/install-k3s.sh
+
+      - name: Generate KubeDig artifacts
+        run: |
+          GITHUB_SHA=$GITHUB_SHA ./KubeDig/build/build_kubedig.sh
+
+      - name: Build Kubedig-Operator
+        working-directory: pkg/KubeDigOperator
+        run: |
+          make docker-build
+
+      - name: Build multiubuntu docker image
+        working-directory: examples/multiubuntu/build
+        if: steps.filter.outputs.multiubuntu == 'true'
+        run: docker build -t kubedig/ubuntu-w-utils:latest .
+
+      - name: Build KubeDigController
+        if: steps.filter.outputs.controller == 'true'
+        run: make -C pkg/KubeDigController/ docker-build TAG=latest
+
+      - name: Run KubeDig
+        timeout-minutes: 7
+        run: |
+          docker save kubedig/kubedig-init:latest | sudo podman load
+          docker save kubedig/kubedig-ubi:latest | sudo podman load
+          docker save kubedig/kubedig-operator:latest | sudo podman load
+          docker save kubedig/kubedig-snitch:latest | sudo podman load
+          
+          if [ ${{ steps.filter.outputs.controller }} == 'true' ]; then 
+            docker save kubedig/kubedig-controller:latest | sudo podman load
+          fi
+          if [[ ${{ steps.filter.outputs.multiubuntu }} == 'true' ]]; then
+            docker save kubedig/ubuntu-w-utils:latest | sudo podman load
+          fi          
+          
+          helm upgrade --install kubedig-operator ./deployments/helm/KubeDigOperator -n kubedig --create-namespace --set kubedigOperator.image.tag=latest
+          kubectl get pods -A
+          kubectl wait --for=condition=ready --timeout=5m -n kubedig pod -l kubedig-app=kubedig-operator
+
+          if [[ ${{ steps.filter.outputs.controller }} == 'true' ]]; then
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-ubi-test.yaml --dry-run=client -o json | \
+            jq '.spec.kubedigControllerImage.imagePullPolicy = "Never"' | \
+            kubectl apply -f -
+          else 
+            kubectl apply -f pkg/KubeDigOperator/config/samples/kubedig-ubi-test.yaml
+          fi
+
+          kubectl wait -n kubedig --timeout=5m --for=jsonpath='{.status.phase}'=Running kubedigconfigs/kubedigconfig-test
+          
+          while [ ! "$(kubectl wait --timeout=5s --for=condition=ready pod -l kubedig-app,kubedig-app!=kubedig-snitch -n kubedig >/dev/null 2>&1; echo $?)" -eq 0 ]; do
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app,kubedig-app!=kubedig-controller -n kubedig
+            kubectl rollout status --timeout=5m daemonset -l kubedig-app=kubedig -n kubedig
+            kubectl rollout status --timeout=5m deployment -n kubedig -l kubedig-app=kubedig-controller -n kubedig
+            kubectl get pods -A
+          done
+      
+      - name: Operator may take upto 10 sec to enable TLS, Sleep for 15Sec
+        run: |
+          sleep 15
+
+      - name: make changes in multiubuntu-deployment
+        working-directory: ./tests/k8s_env
+        if: steps.filter.outputs.multiubuntu == 'true'
+        run: |
+          grep -rl "kubedig/ubuntu-w-utils:latest" ./ | while read -r file; do sed -i 's/imagePullPolicy: Always/imagePullPolicy: Never/g' "$file"; done
+      
+      - name: Test KubeDig using Ginkgo
+        run: |
+          go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
+          make
+        working-directory: ./tests/k8s_env
+        timeout-minutes: 30
+
+      - name: Get karmor sysdump
+        if: ${{ failure() }}
+        run: |
+          kubectl describe pod -n kubedig -l kubedig-app=kubedig
+          curl -sfL http://get.kubedig.io/ | sudo sh -s -- -b /usr/local/bin
+          mkdir -p /tmp/kubedig/ && cd /tmp/kubedig && karmor sysdump
+
+      - name: Archive log artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubedig.logs
+          path: |
+            /tmp/kubedig/
+            /tmp/kubedig.*
+
+      - name: Measure code coverage
+        if: ${{ always() }}
+        run: |
+          go install github.com/modocache/gover@latest
+          gover
+          go tool cover -func=gover.coverprofile
+        working-directory: KubeDig
+        env:
+          GOPATH: /home/vagrant/go
+      - uses: codecov/codecov-action@v3
+        if: ${{ always() }}
+        with:
+          files: ./KubeDig/gover.coverprofile
+      - name: Run cleanup
+        if: ${{ always() }}
+        run: ./.github/workflows/cleanup.sh
+    
+

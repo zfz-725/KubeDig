@@ -1,0 +1,29 @@
+{{- if .Values.kubedigRelay.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubedig
+  namespace: {{.Release.Namespace}}
+  labels:
+    kubedig-app: kubedig-relay
+spec:
+  ports:
+  - port: 32767
+    protocol: TCP
+    targetPort: 32767
+  selector:
+    kubedig-app: kubedig-relay
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.kubedigController.name }}-webhook-service
+  namespace: {{.Release.Namespace}}
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    kubedig-app: {{ .Values.kubedigController.name }}

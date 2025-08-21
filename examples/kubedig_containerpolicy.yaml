@@ -1,0 +1,18 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: process-block
+spec:
+  severity: 5
+  message: "a critical file was accessed"
+  tags:
+  - WARNING
+  selector:
+    matchLabels:
+      kubedig.io/container.name: lb
+  process:
+    matchPaths:
+      - path: /usr/bin/ls
+      - path: /usr/bin/sleep
+  action:
+    Block

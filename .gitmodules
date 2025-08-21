@@ -1,0 +1,3 @@
+[submodule "KubeDig/BPF/libbpf"]
+	path = KubeDig/BPF/libbpf
+	url = https://github.com/libbpf/libbpf/

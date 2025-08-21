@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: bash -c date
+result: passed
+---
+operation: Process
+condition: date
+action: Allow

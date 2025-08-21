@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: empty-array-ls-block
+  namespace: multicontainer
+spec:
+  severity: 4
+  selector:
+    matchLabels:
+      container: multicontainer
+      kubedig.io/container.name: "[]"
+  process:
+    matchPaths:
+    - path: /bin/ls
+      # ls
+  action:
+    Block

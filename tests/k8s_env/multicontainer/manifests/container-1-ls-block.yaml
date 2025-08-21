@@ -1,0 +1,17 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigPolicy
+metadata:
+  name: container-1-block-ls
+  namespace: multicontainer
+spec:
+  severity: 2
+  selector:
+    matchLabels:
+      container: multicontainer
+      kubedig.io/container.name: "[container-1]"
+  process:
+    matchPaths:
+    - path: /bin/ls
+      # ls
+  action:
+    Block

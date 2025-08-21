@@ -1,0 +1,7 @@
+source: kubedig-dev
+cmd: diff --help
+result: failed
+---
+operation: Process
+condition: diff
+action: Block

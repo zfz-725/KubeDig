@@ -1,0 +1,51 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.kubedigOperator.name }}-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-manage-kubedig-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.kubedigOperator.name }}-manage-kubedig-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-manage-controller-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.kubedigOperator.name }}-manage-controller-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-manage-relay-clusterrole-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.kubedigOperator.name }}-manage-relay-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}   
