@@ -1,0 +1,35 @@
+apiVersion: operator.kubedig.com/v1
+kind: KubeDigConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: kubedigconfig
+    app.kubernetes.io/instance: kubedigconfig-sample
+    app.kubernetes.io/part-of: kubedigoperator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedigoperator
+  name: kubedigconfig-default
+  namespace: kubedig
+spec:
+  defaultCapabilitiesPosture: audit
+  defaultFilePosture: audit
+  defaultNetworkPosture: audit
+  defaultVisibility: process,network
+  enableStdOutLogs: false
+  enableStdOutAlerts: false
+  enableStdOutMsgs: false
+  seccompEnabled: false
+  alertThrottling: true
+  maxAlertPerSec: 10
+  throttleSec: 30
+  kubedigImage:
+    image: kubedig/kubedig:stable
+    imagePullPolicy: Always
+  kubedigInitImage:
+    image: kubedig/kubedig-init:stable
+    imagePullPolicy: Always
+  kubedigRelayImage:
+    image: kubedig/kubedig-relay-server
+    imagePullPolicy: Always
+  kubedigControllerImage:
+    image: kubedig/kubedig-controller
+    imagePullPolicy: Always

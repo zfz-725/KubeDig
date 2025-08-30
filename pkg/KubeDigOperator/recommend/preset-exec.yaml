@@ -1,0 +1,15 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigClusterPolicy
+metadata:
+  annotations:
+    app.accuknox.com/source: KubeDig Operator
+    app.accuknox.com/type: preset
+  name: preset-exec
+spec:
+  presets:
+  - action: Audit
+    name: exec
+  message: Alert! exec operation is detected by preset rule
+  selector:
+    matchExpressions:
+  severity: 5

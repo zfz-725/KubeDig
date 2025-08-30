@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- security_v1_kubedigpolicy.yaml
+- security_v1_kubedighostpolicy.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

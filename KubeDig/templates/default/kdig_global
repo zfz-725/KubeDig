@@ -1,0 +1,29 @@
+
+type kdig_global_t; # domain
+
+type kdig_global_block_t; # blocked process
+
+# kubedig service -> assign kdig_global_block_t to a target
+allow unconfined_service_t kdig_global_block_t:file { getattr relabelfrom relabelto };
+
+# unconfined_t -> kdig_global_block_t
+allow unconfined_t kdig_global_block_t:file { kdig_no_process_execution };
+allow kdig_global_block_t fs_t:filesystem { associate };
+
+type kdig_global_read_t;
+
+# kubedig service -> assign kdig_global_read_t to a target
+allow unconfined_service_t kdig_global_read_t:file { getattr relabelfrom relabelto };
+
+# unconfined_t -> kdig_global_read_t;
+allow_readonly_file_access(unconfined_t, kdig_global_read_t)
+allow kdig_global_read_t fs_t:filesystem { associate };
+
+type kdig_global_none_t;
+
+# kubedig service -> assign kdig_global_none_t to a target
+allow unconfined_service_t kdig_global_none_t:file { getattr relabelfrom relabelto };
+
+# unconfined_t -> kdig_global_none_t;
+allow_no_file_access(unconfined_t, kdig_global_none_t)
+allow kdig_global_none_t fs_t:filesystem { associate };

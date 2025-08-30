@@ -1,0 +1,166 @@
+
+# kdig macros
+
+define(`configure_domain', `
+    require {
+        role unconfined_r;
+    }
+
+    application_domain($1, $2)
+    role unconfined_r types $1;
+
+    unconfined_domtrans_to($1, $2)
+    #permissive $1;
+
+    allow $1 $1:capability { kdig_capability_permissions };
+    allow $1 $1:capability2 { kdig_capability2_permissions };
+')
+
+# kdig_process_execution -> kdig_file_permissions
+define(`kdig_process_execution', `{ kdig_file_permissions map }')
+
+# kdig_no_process_execution -> kdig_file_permissions - execute
+define(`kdig_no_process_execution', `{ append create getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink write audit_access entrypoint execute_no_trans execmod open map }')
+
+define(`allow_process_execution', `
+    allow $1 $1:process { setpgid setcap };
+    allow $1 $2:file { kdig_process_execution };
+')
+
+define(`allow_child_process_execution', `
+    require {
+        type fs_t;
+    }
+
+    allow $1 $2:file { kdig_process_execution };
+    allow $2 fs_t:filesystem { associate };
+')
+
+define(`allow_no_child_process_execution', `
+    require {
+        type fs_t;
+    }
+
+    allow $1 $2:file { kdig_no_process_execution };
+    allow $2 fs_t:filesystem { associate };
+')
+
+# kdig_file_access -> kdig_file_permissions
+define(`kdig_file_access', `{ kdig_file_permissions map }')
+
+# kdig_readonly_file_access -> kdig_file_permissions - append - write
+define(`kdig_readonly_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access entrypoint execute_no_trans execmod open map }')
+
+# kdig_no_file_access -> kdig_file_permissions - append - read - write
+define(`kdig_no_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access entrypoint execute_no_trans execmod open map }')
+
+# kdig_lnk_file_access -> kdig_lnk_file_permissions
+define(`kdig_lnk_file_access', `{ kdig_lnk_file_permissions map }')
+
+# kdig_readonly_lnk_file_access -> kdig_lnk_file_permissions - append - write
+define(`kdig_readonly_lnk_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_no_lnk_file_access -> kdig_lnk_file_permissions - append - read - write
+define(`kdig_no_lnk_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_chr_file_access -> kdig_chr_file_permissions
+define(`kdig_chr_file_access', `{ kdig_chr_file_permissions map }')
+
+# kdig_readonly_chr_file_access -> kdig_chr_file_permissions - append - write
+define(`kdig_readonly_chr_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access entrypoint execute_no_trans execmod open map }')
+
+# kdig_no_chr_file_access -> kdig_chr_file_permissions - append - read - write
+define(`kdig_no_chr_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access entrypoint execute_no_trans execmod open map }')
+
+# kdig_blk_file_access -> kdig_blk_file_permissions
+define(`kdig_blk_file_access', `{ kdig_blk_file_permissions map }')
+
+# kdig_readonly_blk_file_access -> kdig_blk_file_permissions - append - write
+define(`kdig_readonly_blk_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_no_blk_file_access -> kdig_blk_file_permissions - append - read - write
+define(`kdig_no_blk_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_sock_file_access -> kdig_sock_file_permissions
+define(`kdig_sock_file_access', `{ kdig_sock_file_permissions map }')
+
+# kdig_readonly_sock_file_access -> kdig_sock_file_permissions - append - write
+define(`kdig_readonly_sock_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_no_sock_file_access -> kdig_sock_file_permissions - append - read - write
+define(`kdig_no_sock_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_fifo_file_access -> kdig_fifo_file_permissions
+define(`kdig_fifo_file_access', `{ kdig_fifo_file_permissions map }')
+
+# kdig_readonly_fifo_file_access -> kdig_fifo_file_permissions - append - write
+define(`kdig_readonly_fifo_file_access', `{ create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+# kdig_no_fifo_file_access -> kdig_fifo_file_permissions - append - read - write
+define(`kdig_no_fifo_file_access', `{ create execute getattr ioctl link lock mounton quotaon relabelfrom relabelto rename setattr swapon unlink audit_access execmod open map }')
+
+define(`allow_dir_access', `
+    allow $1 $2:dir { kdig_dir_permissions };
+')
+
+define(`allow_file_access', `
+    allow $1 $2:file { kdig_file_access };
+    allow $1 $2:lnk_file { kdig_lnk_file_access };
+    allow $1 $2:chr_file { kdig_chr_file_access };
+    allow $1 $2:blk_file { kdig_blk_file_access };
+    allow $1 $2:sock_file { kdig_sock_file_access };
+    allow $1 $2:fifo_file { kdig_fifo_file_access };
+')
+
+define(`allow_readonly_file_access', `
+    allow $1 $2:file { kdig_readonly_file_access };
+    allow $1 $2:lnk_file { kdig_readonly_lnk_file_access };
+    allow $1 $2:chr_file { kdig_readonly_chr_file_access };
+    allow $1 $2:blk_file { kdig_readonly_blk_file_access };
+    allow $1 $2:sock_file { kdig_readonly_sock_file_access };
+    allow $1 $2:fifo_file { kdig_readonly_fifo_file_access };
+')
+
+define(`allow_no_file_access', `
+    allow $1 $2:file { kdig_no_file_access };
+    allow $1 $2:lnk_file { kdig_no_lnk_file_access };
+    allow $1 $2:chr_file { kdig_no_chr_file_access };
+    allow $1 $2:blk_file { kdig_no_blk_file_access };
+    allow $1 $2:sock_file { kdig_no_sock_file_access };
+    allow $1 $2:fifo_file { kdig_no_fifo_file_access };
+')
+
+define(`allow_common_network_operation', `
+    allow $1 $1:node { kdig_node_permissions };
+    allow $1 $1:netif { kdig_netif_permissions };
+    allow $1 $1:socket { kdig_socket_permissions };
+    allow $1 $1:packet_socket { kdig_packet_socket_permissions };
+    allow $1 $1:tun_socket { kdig_tun_socket_permissions };
+    allow $1 $1:unix_stream_socket { kdig_unix_stream_socket_permissions };
+    allow $1 $1:unix_dgram_socket { kdig_unix_dgram_socket_permissions };
+    allow $1 $1:netlink_socket { kdig_netlink_socket_permissions };
+    allow $1 $1:netlink_route_socket { kdig_netlink_route_socket_permissions };
+
+    require {
+        type net_conf_t;
+    }
+
+    allow $1 net_conf_t:file { read open getattr };
+')
+
+define(`allow_tcp_network_operation', `
+    allow $1 $1:tcp_socket { kdig_tcp_socket_permissions };
+')
+
+define(`allow_udp_network_operation', `
+    allow $1 $1:udp_socket { kdig_udp_socket_permissions };
+')
+
+define(`allow_icmp_network_operation', `
+    allow $1 $1:icmp_socket { kdig_icmp_socket_permissions };
+')
+
+define(`allow_raw_network_operation', `
+    allow $1 $1:rawip_socket { kdig_rawip_socket_permissions };
+    allow $1 $1:netlink_route_socket { kdig_netlink_route_socket_permissions };
+')

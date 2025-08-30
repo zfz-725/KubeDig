@@ -1,0 +1,56 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-tls-secrets-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.kubedigOperator.name }}-tls-secrets-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-manage-snitch-job-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.kubedigOperator.name }}-manage-snitch-job-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-manage-controller-leader-election-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.kubedigOperator.name }}-manage-controller-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.kubedigOperator.name }}-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.kubedigOperator.name }}-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.kubedigOperator.name }}
+  namespace: {{ .Release.Namespace }}  

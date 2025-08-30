@@ -1,0 +1,17 @@
+{{- if .Values.autoDeploy }}
+apiVersion: operator.kubedig.com/v1
+kind: KubeDigConfig
+metadata:
+    annotations:
+        "helm.sh/hook": post-install,post-upgrade
+    labels:
+        app.kubernetes.io/name: kubedigconfig
+        app.kubernetes.io/instance: kubedigconfig-sample
+        app.kubernetes.io/part-of: kubedigoperator
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/created-by: kubedigoperator
+    name: kubedig-default
+    namespace: {{ .Release.Namespace }}
+spec:
+    {{- toYaml .Values.kubedigConfig | nindent 4}}
+{{- end}}

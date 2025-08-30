@@ -1,0 +1,6 @@
+apiVersion: security.kubedig.com/v1
+kind: KubeDigHostPolicy
+metadata:
+  name: kubedighostpolicy-sample
+spec:
+  # TODO(user): Add fields here

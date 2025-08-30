@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubedig-operator
+spec:
+  selector:
+    matchLabels:
+      kubedig-app: kubedig-operator
+  template:
+    metadata:
+      labels:
+        kubedig-app: kubedig-operator
+    spec:
+      serviceAccountName: kubedig-operator
+      containers:
+      - name: operator
+        image: kubedig/kubedig-operator:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: KUBEDIG_OPERATOR_NS
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace

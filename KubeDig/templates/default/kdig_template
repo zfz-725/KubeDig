@@ -1,0 +1,68 @@
+
+type kdig_t; # domain
+
+type kdig_exec_t; # parent process
+type kdig_allow_t; # child process
+type kdig_block_t; # child process
+
+# kubedig service -> assign kdig_exec_t to a target
+allow unconfined_service_t kdig_exec_t:file { getattr relabelfrom relabelto };
+
+# unconfined -> kdig_exec_t
+configure_domain(kdig_t, kdig_exec_t)
+allow_process_execution(kdig_t, kdig_exec_t)
+
+# kubedig service -> assign kdig_allow_t to a target
+allow unconfined_service_t kdig_allow_t:file { getattr relabelfrom relabelto };
+
+# kdig_t -> kdig_allow_t
+allow_child_process_execution(kdig_t, kdig_allow_t)
+allow_file_access(unconfined_t, kdig_allow_t)
+
+# kubedig service -> assign kdig_block_t to a target
+allow unconfined_service_t kdig_block_t:file { getattr relabelfrom relabelto };
+
+# kdig_t -> kdig_block_t
+allow_no_child_process_execution(kdig_t, kdig_block_t)
+allow_file_access(unconfined_t, kdig_block_t)
+
+type kdig_read_t;
+files_type(kdig_read_t)
+
+type kdig_file_t;
+files_type(kdig_file_t)
+
+type kdig_none_t;
+files_type(kdig_none_t)
+
+# kubedig service -> assign kdig_read_t to a target
+allow unconfined_service_t kdig_read_t:file { getattr relabelfrom relabelto };
+
+# kdig_t -> kdig_read_t
+allow_readonly_file_access(kdig_t, kdig_read_t)
+allow_file_access(unconfined_t, kdig_read_t)
+
+# kubedig service -> assign kdig_file_t to a target
+allow unconfined_service_t kdig_file_t:file { getattr relabelfrom relabelto };
+
+# kdig_t -> kdig_file_t
+allow_file_access(kdig_t, kdig_file_t)
+allow_file_access(unconfined_t, kdig_file_t)
+
+# kubedig service -> assign kdig_none_t to a target
+allow unconfined_service_t kdig_none_t:file { getattr relabelfrom relabelto };
+
+# kdig_t -> kdig_none_t
+allow_no_file_access(kdig_t, kdig_none_t)
+allow_file_access(unconfined_t, kdig_none_t)
+
+# kdig_t -> basic network operation
+allow_common_network_operation(kdig_t)
+
+# kdig_t -> per-protocol network operation
+
+require {
+    type user_devpts_t;
+}
+
+allow kdig_t user_devpts_t:chr_file { append create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink write audit_access entrypoint execute_no_trans execmod open };

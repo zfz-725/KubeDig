@@ -1,0 +1,13 @@
+[Unit]
+Description=KubeDig
+
+[Service]
+User=root
+KillMode=process
+WorkingDirectory=/opt/kubedig/
+ExecStart=/opt/kubedig/kubedig
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

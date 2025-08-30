@@ -1,0 +1,12 @@
+apiVersion: operator.kubedig.com/v1
+kind: KubeDigConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: kubedigconfig
+    app.kubernetes.io/instance: kubedigconfig-sample
+    app.kubernetes.io/part-of: kubedigoperator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedigoperator
+  name: kubedigconfig-sample
+spec:
+  # TODO(user): Add fields here

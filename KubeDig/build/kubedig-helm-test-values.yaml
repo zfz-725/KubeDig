@@ -1,0 +1,39 @@
+kubedigRelay:
+  enabled: true
+  image:
+    tag: latest
+
+kubedigInit:
+  image:
+    tag: latest
+  imagePullPolicy: Never
+
+# we pull the latest controller image by default
+kubedigController:
+  image:
+    tag: latest
+  imagePullPolicy: Always
+
+environment:
+  name: docker
+
+kubedigConfigMap:
+  defaultFilePosture: block
+  defaultCapabilitiesPosture: block
+  defaultNetworkPosture: block
+  visibility: process,file,network
+
+kubedig:
+  image:
+    tag: latest
+  imagePullPolicy: Never
+  args:
+    - -logPath=/tmp/kubedig.log
+    - -enableKubeDigHostPolicy
+    - -defaultFilePosture=block
+    - -defaultCapabilitiesPosture=block
+    - -defaultNetworkPosture=block
+    - -hostDefaultCapabilitiesPosture=block
+    - -hostDefaultNetworkPosture=block
+    - -hostDefaultFilePosture=block
+    - -lsm=apparmor,bpf,selinux

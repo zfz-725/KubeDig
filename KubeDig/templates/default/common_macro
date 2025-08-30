@@ -1,0 +1,137 @@
+
+# https://selinuxproject.org/page/NB_ObjectClassesPermissions#File_Object_Classes
+
+# common permissions
+
+define(`kdig_common_file_permissions', `{ append create execute getattr ioctl link lock mounton quotaon read relabelfrom relabelto rename setattr swapon unlink write }')
+define(`kdig_common_socket_permissions', `{ accept append bind connect create getattr getopt ioctl listen lock name_bind read recv_msg recvfrom relabelfrom relabelto send_msg sendto setattr setopt shutdown write }')
+define(`kdig_common_ipc_permissions', `{ associate create destroy getattr read setattr unix_read unix_write write }')
+define(`kdig_common_database_permissions', `{ create drop getattr relabelfrom relabelto setattr }')
+define(`kdig_common_x_device_permissions', `{ add bell create destroy force_cursor freeze get_property getattr getfocus grab list_property manage read remove set_property setattr setfocus use write }')
+define(`kdig_common_filesystem_permissions', `{ associate getattr mount quotaget quotamod relabelfrom relabelto remount transition unmount }')
+
+# file object classes
+
+define(`kdig_filesystem_permissions', `{ associate getattr mount quotaget quotamod relabelfrom relabelto remount transition unmount }')
+define(`kdig_dir_permissions', `{ kdig_common_file_permissions add_name audit_access execmod open remove_name reparent rmdir search }')
+define(`kdig_file_permissions', `{ kdig_common_file_permissions audit_access entrypoint execute_no_trans execmod open }')
+define(`kdig_lnk_file_permissions', `{ kdig_common_file_permissions audit_access execmod open }')
+define(`kdig_chr_file_permissions', `{ kdig_common_file_permissions audit_access entrypoint execute_no_trans execmod open }')
+define(`kdig_blk_file_permissions', `{ kdig_common_file_permissions audit_access execmod open }')
+define(`kdig_sock_file_permissions', `{ kdig_common_file_permissions audit_access execmod open }')
+define(`kdig_fifo_file_permissions', `{ kdig_common_file_permissions audit_access execmod open }')
+define(`kdig_fd_permissions', `{ use }')
+
+# network object classes
+
+define(`kdig_node_permissions', `{ dccp_recv dccp_send enforce_dest rawip_recv recvfrom sendto tcp_recv tcp_send udp_recv udp_send }')
+define(`kdig_netif_permissions', `{ dccp_recv dccp_send egress ingress rawip_recv rawip_send tcp_recv tcp_send udp_recv udp_send }')
+define(`kdig_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_tcp_socket_permissions', `{ kdig_common_socket_permissions acceptfrom connectto name_connect newconn node_bind }')
+define(`kdig_udp_socket_permissions', `{ kdig_common_socket_permissions node_bind }')
+define(`kdig_icmp_socket_permissions', `{ kdig_common_socket_permissions node_bind }')
+define(`kdig_rawip_socket_permissions', `{ kdig_common_socket_permissions node_bind }')
+define(`kdig_packet_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_tun_socket_permissions', `{ kdig_common_socket_permissions attach_queue }')
+define(`kdig_unix_stream_socket_permissions', `{ kdig_common_socket_permissions acceptfrom connectto newconn }')
+define(`kdig_unix_dgram_socket_permissions', `{ kdig_common_socket_permissions }')
+
+# ipsec network object classes
+
+define(`kdig_association_permissions', `{ polmatch recvfrom sendto setcontext }')
+define(`kdig_key_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_netlink_xfrm_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+
+# netlink object classes
+
+define(`kdig_netlink_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_netlink_route_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+define(`kdig_netlink_firewall_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+define(`kdig_tcpdiag_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+define(`kdig_nflog_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_selinux_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_audit_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_readpriv nlmsg_relay nlmsg_tty_audit nlmsg_write }')
+define(`kdig_netlink_ip6fw_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+define(`kdig_netlink_dnrt_socket_permissions', `{ kdig_common_socket_permissions nlmsg_read nlmsg_write }')
+define(`kdig_netlink_kobject_uevent_socket_permissions', `{ kdig_common_socket_permissions }')
+
+# miscellaneous network object classes
+
+define(`kdig_peer_permissions', `{ recv }')
+define(`kdig_packet_permissions', `{ flow_in flow_out forward_in forward_out recv relabelto send }')
+define(`kdig_appletalk_socket_permissions', `{ kdig_common_socket_permissions }')
+define(`kdig_dccp_socket_permissions', `{ kdig_common_socket_permissions name_connect node_bind }')
+
+# ipc object classes
+
+define(`kdig_ipc_permissions', `{ kdig_common_ipc_permissions }')
+define(`kdig_sem_permissions', `{ kdig_common_ipc_permissions }')
+define(`kdig_msgq_permissions', `{ kdig_common_ipc_permissions enqueue }')
+define(`kdig_msg_permissions', `{ receive send }')
+define(`kdig_shm_permissions', `{ kdig_common_ipc_permissions lock }')
+
+# process object classes
+
+define(`kdig_process_permissions', `{ dyntransition execheap execmem execstack fork getattr getcap getpgid getsched getsession noatsecure ptrace ptrace_child rlimitinh setcap setcurrent setexec setfscreate setkeycreate setpgid setrlimit setsched setsockcreate share sigchld siginh sigkill signal signull sigstop transition }')
+
+# security object classes
+
+define(`kdig_security_permissions', `{ check_context compute_av compute_create compute_member compute_relabel compute_user load_policy read_policy setbool setcheckreqprot setenforce setsecparam }')
+
+# system operation object classes
+
+define(`kdig_system_permissions', `{ disable enable halt ipc_info module_request reboot reload status syslog_console syslog_mod syslog_read undefined }')
+
+# kernel service object classes
+
+define(`kdig_kernel_service_permissions', `{ use_as_override create_files_as }')
+
+# capability object classes
+
+define(`kdig_capability_permissions', `{ audit_control audit_write chown dac_override dac_read_search fowner fsetid ipc_lock ipc_owner kill lease linux_immutable mknod net_admin net_bind_service net_raw net_broadcast setfcap setgid setpcap setuid sys_admin sys_boot sys_chroot sys_module sys_nice sys_pacct sys_ptrace sys_rawio sys_resource sys_time sys_tty_config }')
+define(`kdig_capability2_permissions', `{ block_suspend mac_admin mac_override syslog wake_alarm }')
+
+# x windows object classes
+
+define(`kdig_x_drawable_permissions', `{ add_child blend create destroy get_property getattr hide list_child list_property manage override read receive remove_child send set_property setattr show write }')
+define(`kdig_x_screen_permissions', `{ getattr hide_cursor saver_getattr saver_hide saver_setattr saver_show setattr show_cursor }')
+define(`kdig_x_gc_permissions', `{ create destroy getattr setattr use }')
+define(`kdig_x_font_permissions', `{ add_glyph create destroy getattr remove_glyph use }')
+define(`kdig_x_colormap', `{ add_color create destroy getattr install read remove_color uninstall use write }')
+define(`kdig_x_property_permissions', `{ append create destroy getattr read setattr write }')
+define(`kdig_x_selection_permissions', `{ getattr read setattr write }')
+define(`kdig_x_cursor_permissions', `{ create destroy getattr read setattr use write }')
+define(`kdig_x_client_permissions', `{ destroy getattr manage setattr }')
+define(`kdig_x_device_permissions', `{ kdig_common_x_device_permissions }')
+define(`kdig_x_server_permissions', `{ debug getattr grab manage record setattr }')
+define(`kdig_x_extension_permissions', `{ query use }')
+define(`kdig_x_resource_permissions', `{ read write }')
+define(`kdig_x_event_permissions', `{ receive send }')
+define(`kdig_x_synthetic_event_permissions', `{ receive send }')
+define(`kdig_x_application_data_permissions', `{ copy paste paste_after_confirm }')
+define(`kdig_x_pointer_permissions', `{ kdig_common_x_device_permissions }')
+define(`kdig_x_keyboard_permissions', `{ kdig_common_x_device_permissions }')
+
+# database object classes
+
+define(`kdig_db_database_permissions', `{ kdig_common_database_permissions access install_module load_module }')
+define(`kdig_db_table_permissions', `{ kdig_common_database_permissions delete insert lock select update }')
+define(`kdig_db_schema_permissions', `{ kdig_common_database_permissions search add_name remove_name }')
+define(`kdig_db_procedure_permissions', `{ kdig_common_database_permissions entrypoint execute install }')
+define(`kdig_db_column_permissions', `{ kdig_common_database_permissions insert select update }')
+define(`kdig_db_tuple_permissions', `{ delete insert relabelfrom relabelto select update use }')
+define(`kdig_db_blob_permissions', `{ kdig_common_database_permissions export import read write }')
+define(`kdig_db_view_permissions', `{ kdig_common_database_permissions expand }')
+define(`kdig_db_sequence_permissions', `{ kdig_common_database_permissions get_value next_value set_value }')
+define(`kdig_db_language_permissions', `{ kdig_common_database_permissions implement execute }')
+
+# miscellaneous object classes
+
+define(`kdig_passwd_permissions', `{ chfn chsh crontab passwd rootok }')
+define(`kdig_nscd_permissions', `{ admin getgrp gethost getnetgrp getpwd getserv getstat shmemgrp shmemnetgrp shmempwd shmemserv }')
+define(`kdig_dbus_permissions', `{ acquire_svc send_msg }')
+define(`kdig_context_permissions', `{ contains translate }')
+define(`kdig_key_permissions', `{ create link read search setattr view write }')
+define(`kdig_memprotect_permissions', `{ mmap_zero }')
+define(`kdig_service_permissions', `{ disable enable kill load reload start status stop }')
+define(`kdig_proxy_permissions', `{ read }')
